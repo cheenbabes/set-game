@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Card Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .game-info {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .message {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            min-height: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .message.success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .message.error {
+            background: #f44336;
+            color: white;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            aspect-ratio: 2/3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        .card.selected {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: translateY(-5px);
+        }
+
+        .shape {
+            width: 80px;
+            height: 40px;
+            position: relative;
+        }
+
+        /* Diamond shape */
+        .diamond {
+            width: 40px;
+            height: 40px;
+            transform: rotate(45deg);
+            margin: 20px;
+        }
+
+        /* Oval shape */
+        .oval {
+            width: 80px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        /* Squiggle shape - approximated with path */
+        .squiggle {
+            width: 80px;
+            height: 40px;
+        }
+
+        /* Colors */
+        .red.solid { background-color: #e53935; }
+        .green.solid { background-color: #43a047; }
+        .purple.solid { background-color: #8e24aa; }
+
+        .red.striped {
+            background: repeating-linear-gradient(
+                45deg,
+                #e53935,
+                #e53935 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+        .green.striped {
+            background: repeating-linear-gradient(
+                45deg,
+                #43a047,
+                #43a047 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+        .purple.striped {
+            background: repeating-linear-gradient(
+                45deg,
+                #8e24aa,
+                #8e24aa 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+
+        .red.empty {
+            background-color: transparent;
+            border: 3px solid #e53935;
+        }
+        .green.empty {
+            background-color: transparent;
+            border: 3px solid #43a047;
+        }
+        .purple.empty {
+            background-color: transparent;
+            border: 3px solid #8e24aa;
+        }
+
+        .game-over {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .game-over h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .board {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .shape {
+                width: 60px;
+                height: 30px;
+            }
+
+            .oval {
+                width: 60px;
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🎴 Set Card Game</h1>
+
+    <div class="game-info">
+        <div class="info-item">
+            <span class="info-label">Sets Found</span>
+            <span class="info-value" id="score">0</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Cards Left</span>
+            <span class="info-value" id="cardsLeft">81</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Selected</span>
+            <span class="info-value" id="selected">0</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button id="newGameBtn">New Game</button>
+        <button id="hintBtn">Show Hint</button>
+        <button id="add3CardsBtn">Add 3 Cards</button>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <div class="board" id="board"></div>
+
+    <script>
+        class SetGame {
+            constructor() {
+                this.deck = [];
+                this.board = [];
+                this.selectedCards = [];
+                this.score = 0;
+                this.init();
+            }
+
+            init() {
+                this.createDeck();
+                this.shuffleDeck();
+                this.dealCards(12);
+                this.render();
+                this.updateInfo();
+            }
+
+            createDeck() {
+                const numbers = [1, 2, 3];
+                const shapes = ['diamond', 'oval', 'squiggle'];
+                const colors = ['red', 'green', 'purple'];
+                const shadings = ['solid', 'striped', 'empty'];
+
+                this.deck = [];
+                for (let number of numbers) {
+                    for (let shape of shapes) {
+                        for (let color of colors) {
+                            for (let shading of shadings) {
+                                this.deck.push({ number, shape, color, shading });
+                            }
+                        }
+                    }
+                }
+            }
+
+            shuffleDeck() {
+                for (let i = this.deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+                }
+            }
+
+            dealCards(count) {
+                for (let i = 0; i < count && this.deck.length > 0; i++) {
+                    this.board.push(this.deck.pop());
+                }
+            }
+
+            isValidSet(cards) {
+                if (cards.length !== 3) return false;
+
+                const attributes = ['number', 'shape', 'color', 'shading'];
+
+                for (let attr of attributes) {
+                    const values = cards.map(card => card[attr]);
+                    const allSame = values.every(v => v === values[0]);
+                    const allDifferent = new Set(values).size === 3;
+
+                    if (!allSame && !allDifferent) {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            findSets() {
+                const sets = [];
+                for (let i = 0; i < this.board.length; i++) {
+                    for (let j = i + 1; j < this.board.length; j++) {
+                        for (let k = j + 1; k < this.board.length; k++) {
+                            const cards = [this.board[i], this.board[j], this.board[k]];
+                            if (this.isValidSet(cards)) {
+                                sets.push([i, j, k]);
+                            }
+                        }
+                    }
+                }
+                return sets;
+            }
+
+            selectCard(index) {
+                const cardIndex = this.selectedCards.indexOf(index);
+
+                if (cardIndex > -1) {
+                    this.selectedCards.splice(cardIndex, 1);
+                } else {
+                    if (this.selectedCards.length < 3) {
+                        this.selectedCards.push(index);
+                    }
+                }
+
+                if (this.selectedCards.length === 3) {
+                    this.checkSet();
+                } else {
+                    this.render();
+                    this.updateInfo();
+                }
+            }
+
+            checkSet() {
+                const cards = this.selectedCards.map(i => this.board[i]);
+
+                if (this.isValidSet(cards)) {
+                    this.showMessage('Valid Set! 🎉', 'success');
+                    this.score++;
+
+                    // Remove the cards and replace them
+                    this.selectedCards.sort((a, b) => b - a);
+                    for (let index of this.selectedCards) {
+                        this.board.splice(index, 1);
+                    }
+
+                    // Add new cards if deck has cards and board is under 12
+                    const cardsToAdd = Math.min(3, 12 - this.board.length, this.deck.length);
+                    this.dealCards(cardsToAdd);
+
+                    this.selectedCards = [];
+
+                    // Check if game is over
+                    if (this.board.length === 0 || (this.deck.length === 0 && this.findSets().length === 0)) {
+                        this.gameOver();
+                    }
+                } else {
+                    this.showMessage('Not a valid set. Try again!', 'error');
+                    this.selectedCards = [];
+                }
+
+                this.render();
+                this.updateInfo();
+            }
+
+            showHint() {
+                const sets = this.findSets();
+                if (sets.length > 0) {
+                    const hintSet = sets[0];
+                    this.showMessage(`Hint: Try cards at positions ${hintSet.map(i => i + 1).join(', ')}`, 'success');
+
+                    // Briefly highlight the cards
+                    this.selectedCards = hintSet;
+                    this.render();
+
+                    setTimeout(() => {
+                        this.selectedCards = [];
+                        this.render();
+                        this.showMessage('');
+                    }, 2000);
+                } else {
+                    this.showMessage('No sets available! Add more cards.', 'error');
+                }
+            }
+
+            add3Cards() {
+                if (this.deck.length >= 3) {
+                    this.dealCards(3);
+                    this.render();
+                    this.updateInfo();
+                    this.showMessage('Added 3 cards to the board', 'success');
+                    setTimeout(() => this.showMessage(''), 2000);
+                } else {
+                    this.showMessage('Not enough cards in deck!', 'error');
+                    setTimeout(() => this.showMessage(''), 2000);
+                }
+            }
+
+            showMessage(text, type = '') {
+                const msgEl = document.getElementById('message');
+                msgEl.textContent = text;
+                msgEl.className = 'message ' + type;
+            }
+
+            gameOver() {
+                setTimeout(() => {
+                    this.showMessage(`Game Over! You found ${this.score} sets! 🎊`, 'success');
+                }, 500);
+            }
+
+            createShapeElement(card) {
+                const container = document.createElement('div');
+
+                for (let i = 0; i < card.number; i++) {
+                    const shape = document.createElement('div');
+                    shape.className = `shape ${card.shape} ${card.color} ${card.shading}`;
+                    container.appendChild(shape);
+                }
+
+                return container;
+            }
+
+            render() {
+                const boardEl = document.getElementById('board');
+                boardEl.innerHTML = '';
+
+                this.board.forEach((card, index) => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = 'card';
+                    if (this.selectedCards.includes(index)) {
+                        cardEl.classList.add('selected');
+                    }
+
+                    cardEl.appendChild(this.createShapeElement(card));
+                    cardEl.addEventListener('click', () => this.selectCard(index));
+
+                    boardEl.appendChild(cardEl);
+                });
+            }
+
+            updateInfo() {
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('cardsLeft').textContent = this.deck.length;
+                document.getElementById('selected').textContent = this.selectedCards.length;
+            }
+
+            newGame() {
+                this.deck = [];
+                this.board = [];
+                this.selectedCards = [];
+                this.score = 0;
+                this.showMessage('');
+                this.init();
+            }
+        }
+
+        // Initialize game
+        let game = new SetGame();
+
+        // Event listeners
+        document.getElementById('newGameBtn').addEventListener('click', () => {
+            game.newGame();
+        });
+
+        document.getElementById('hintBtn').addEventListener('click', () => {
+            game.showHint();
+        });
+
+        document.getElementById('add3CardsBtn').addEventListener('click', () => {
+            game.add3Cards();
+        });
+    </script>
+</body>
+</html>
