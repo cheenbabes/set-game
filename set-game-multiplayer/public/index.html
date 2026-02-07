@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Card Game - Multiplayer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Lobby Screen */
+        .lobby {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .lobby h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .lobby input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .lobby input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .lobby button {
+            width: 100%;
+            padding: 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+
+        .lobby button:hover {
+            background: #5568d3;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            color: #999;
+        }
+
+        /* Waiting Room */
+        .waiting-room {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .waiting-room h2 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .room-code {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .room-code-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .room-code-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            letter-spacing: 3px;
+        }
+
+        .players-list {
+            margin-bottom: 20px;
+        }
+
+        .player-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+
+        .player-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .player-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .player-score {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        /* Game Screen */
+        .game-screen {
+            display: none;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .game-info {
+            background: white;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .message {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            min-height: 30px;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .message.success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .message.error {
+            background: #f44336;
+            color: white;
+        }
+
+        .message.info {
+            background: #2196f3;
+            color: white;
+        }
+
+        .players-sidebar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .players-sidebar h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            aspect-ratio: 2/3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+
+        .card.selected {
+            border-width: 4px;
+            transform: translateY(-5px);
+        }
+
+        .card.my-selection {
+            background: #f0f4ff;
+        }
+
+        .shape {
+            width: 80px;
+            height: 40px;
+            position: relative;
+        }
+
+        .diamond {
+            width: 40px;
+            height: 40px;
+            transform: rotate(45deg);
+            margin: 20px;
+        }
+
+        .oval {
+            width: 80px;
+            height: 40px;
+            border-radius: 50%;
+        }
+
+        .squiggle {
+            width: 80px;
+            height: 40px;
+        }
+
+        .red.solid { background-color: #e53935; }
+        .green.solid { background-color: #43a047; }
+        .purple.solid { background-color: #8e24aa; }
+
+        .red.striped {
+            background: repeating-linear-gradient(45deg, #e53935, #e53935 3px, transparent 3px, transparent 6px);
+        }
+        .green.striped {
+            background: repeating-linear-gradient(45deg, #43a047, #43a047 3px, transparent 3px, transparent 6px);
+        }
+        .purple.striped {
+            background: repeating-linear-gradient(45deg, #8e24aa, #8e24aa 3px, transparent 3px, transparent 6px);
+        }
+
+        .red.empty {
+            background-color: transparent;
+            border: 3px solid #e53935;
+        }
+        .green.empty {
+            background-color: transparent;
+            border: 3px solid #43a047;
+        }
+        .purple.empty {
+            background-color: transparent;
+            border: 3px solid #8e24aa;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) {
+            .board {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .shape {
+                width: 60px;
+                height: 30px;
+            }
+            .oval {
+                width: 60px;
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🎴 Set Card Game - Multiplayer</h1>
+
+    <!-- Lobby Screen -->
+    <div id="lobby" class="lobby">
+        <h2>Welcome to Set!</h2>
+        <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+        <button onclick="createRoom()">Create New Game</button>
+
+        <div class="divider">- OR -</div>
+
+        <input type="text" id="roomCode" placeholder="Enter room code" maxlength="6">
+        <button onclick="joinRoom()">Join Game</button>
+    </div>
+
+    <!-- Waiting Room -->
+    <div id="waitingRoom" class="waiting-room hidden">
+        <h2>Waiting for players...</h2>
+
+        <div class="room-code">
+            <div class="room-code-label">Room Code</div>
+            <div class="room-code-value" id="displayRoomCode"></div>
+        </div>
+
+        <div class="players-list">
+            <h3>Players</h3>
+            <div id="waitingPlayers"></div>
+        </div>
+
+        <button onclick="startGame()" id="startGameBtn">Start Game</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="game-screen">
+        <div class="game-info">
+            <div class="info-item">
+                <span class="info-label">Room Code</span>
+                <span class="info-value" id="gameRoomCode"></span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Cards Left</span>
+                <span class="info-value" id="cardsLeft">81</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="requestHint()">💡 Hint</button>
+            <button onclick="add3Cards()">➕ Add 3 Cards</button>
+            <button onclick="leaveGame()">🚪 Leave Game</button>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div class="players-sidebar" id="playersSidebar">
+            <h3>Players</h3>
+            <div id="playersDisplay"></div>
+        </div>
+
+        <div class="board" id="board"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let myPlayerId = null;
+        let currentRoomId = null;
+        let gameState = null;
+        let mySelection = [];
+
+        // Lobby functions
+        function createRoom() {
+            const playerName = document.getElementById('playerName').value.trim();
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+            socket.emit('createRoom', playerName);
+        }
+
+        function joinRoom() {
+            const playerName = document.getElementById('playerName').value.trim();
+            const roomCode = document.getElementById('roomCode').value.trim().toUpperCase();
+
+            if (!playerName) {
+                alert('Please enter your name');
+                return;
+            }
+            if (!roomCode) {
+                alert('Please enter room code');
+                return;
+            }
+
+            socket.emit('joinRoom', { roomId: roomCode, playerName });
+        }
+
+        function startGame() {
+            socket.emit('startGame', currentRoomId);
+        }
+
+        function leaveGame() {
+            location.reload();
+        }
+
+        // Game functions
+        function selectCard(index) {
+            if (!gameState || !gameState.gameStarted) return;
+            socket.emit('selectCard', { roomId: currentRoomId, cardIndex: index });
+        }
+
+        function requestHint() {
+            socket.emit('requestHint', currentRoomId);
+        }
+
+        function add3Cards() {
+            socket.emit('add3Cards', currentRoomId);
+        }
+
+        // Socket event handlers
+        socket.on('roomCreated', ({ roomId, player }) => {
+            currentRoomId = roomId;
+            myPlayerId = player.id;
+            showWaitingRoom(roomId);
+        });
+
+        socket.on('roomJoined', ({ roomId, player }) => {
+            currentRoomId = roomId;
+            myPlayerId = player.id;
+            showWaitingRoom(roomId);
+        });
+
+        socket.on('gameState', (state) => {
+            gameState = state;
+
+            if (state.gameStarted && !state.gameOver) {
+                showGameScreen();
+                updateGameUI(state);
+            } else if (state.gameOver) {
+                showGameOver(state);
+            } else {
+                updateWaitingRoom(state);
+            }
+        });
+
+        socket.on('gameStarted', (state) => {
+            gameState = state;
+            showGameScreen();
+            updateGameUI(state);
+            showMessage('Game started! Find those sets! 🎮', 'success');
+        });
+
+        socket.on('cardSelected', ({ playerId, cardIndex, selectedCards }) => {
+            if (playerId === myPlayerId) {
+                mySelection = selectedCards;
+            }
+            renderBoard();
+        });
+
+        socket.on('validSet', ({ playerId, playerName, score }) => {
+            const isMe = playerId === myPlayerId;
+            const message = isMe ?
+                `You found a set! 🎉 Score: ${score}` :
+                `${playerName} found a set! 🎉`;
+            showMessage(message, 'success');
+            mySelection = [];
+        });
+
+        socket.on('invalidSet', ({ playerId, playerName }) => {
+            const isMe = playerId === myPlayerId;
+            const message = isMe ?
+                'Not a valid set. Try again!' :
+                `${playerName} tried an invalid set`;
+            showMessage(message, 'error');
+            mySelection = [];
+        });
+
+        socket.on('playerJoined', ({ player }) => {
+            showMessage(`${player.name} joined the game`, 'info');
+        });
+
+        socket.on('playerLeft', ({ playerId }) => {
+            showMessage('A player left the game', 'info');
+        });
+
+        socket.on('hint', ({ indices }) => {
+            showMessage(`Hint: Try cards at positions ${indices.map(i => i + 1).join(', ')}`, 'info');
+
+            // Briefly highlight hint cards
+            const cards = document.querySelectorAll('.card');
+            indices.forEach(i => {
+                cards[i]?.classList.add('selected');
+            });
+
+            setTimeout(() => {
+                indices.forEach(i => {
+                    cards[i]?.classList.remove('selected');
+                });
+                showMessage('');
+            }, 2000);
+        });
+
+        socket.on('cardsAdded', () => {
+            showMessage('Added 3 cards to the board', 'success');
+            setTimeout(() => showMessage(''), 1500);
+        });
+
+        socket.on('gameOver', ({ winner, players }) => {
+            showGameOver({ winner, players });
+        });
+
+        socket.on('error', ({ message }) => {
+            showMessage(message, 'error');
+        });
+
+        // UI functions
+        function showWaitingRoom(roomId) {
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('waitingRoom').classList.remove('hidden');
+            document.getElementById('displayRoomCode').textContent = roomId;
+        }
+
+        function updateWaitingRoom(state) {
+            const container = document.getElementById('waitingPlayers');
+            container.innerHTML = state.players.map(player => `
+                <div class="player-item">
+                    <div class="player-color" style="background: ${player.color}"></div>
+                    <div class="player-name">${player.name}</div>
+                </div>
+            `).join('');
+        }
+
+        function showGameScreen() {
+            document.getElementById('lobby').classList.add('hidden');
+            document.getElementById('waitingRoom').classList.add('hidden');
+            document.getElementById('gameScreen').style.display = 'block';
+        }
+
+        function updateGameUI(state) {
+            document.getElementById('gameRoomCode').textContent = state.roomId;
+            document.getElementById('cardsLeft').textContent = state.deckSize;
+
+            // Update players
+            const playersContainer = document.getElementById('playersDisplay');
+            playersContainer.innerHTML = state.players
+                .sort((a, b) => b.score - a.score)
+                .map(player => `
+                    <div class="player-item">
+                        <div class="player-color" style="background: ${player.color}"></div>
+                        <div class="player-name">${player.name}${player.id === myPlayerId ? ' (You)' : ''}</div>
+                        <div class="player-score">${player.score}</div>
+                    </div>
+                `).join('');
+
+            renderBoard();
+        }
+
+        function renderBoard() {
+            if (!gameState) return;
+
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            gameState.board.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card';
+
+                // Check if this card is selected by me
+                if (mySelection.includes(index)) {
+                    cardEl.classList.add('selected', 'my-selection');
+                    const myPlayer = gameState.players.find(p => p.id === myPlayerId);
+                    if (myPlayer) {
+                        cardEl.style.borderColor = myPlayer.color;
+                    }
+                } else {
+                    // Check if selected by other players
+                    for (let [playerId, selection] of Object.entries(gameState.selections || {})) {
+                        if (selection.includes(index) && playerId !== myPlayerId) {
+                            cardEl.classList.add('selected');
+                            const player = gameState.players.find(p => p.id === playerId);
+                            if (player) {
+                                cardEl.style.borderColor = player.color;
+                            }
+                        }
+                    }
+                }
+
+                cardEl.appendChild(createShapeElement(card));
+                cardEl.addEventListener('click', () => selectCard(index));
+
+                boardEl.appendChild(cardEl);
+            });
+        }
+
+        function createShapeElement(card) {
+            const container = document.createElement('div');
+
+            for (let i = 0; i < card.number; i++) {
+                const shape = document.createElement('div');
+                shape.className = `shape ${card.shape} ${card.color} ${card.shading}`;
+                container.appendChild(shape);
+            }
+
+            return container;
+        }
+
+        function showMessage(text, type = '') {
+            const msgEl = document.getElementById('message');
+            msgEl.textContent = text;
+            msgEl.className = 'message ' + type;
+        }
+
+        function showGameOver(state) {
+            const message = state.winner ?
+                `🎊 Game Over! ${state.winner.name} wins with ${state.winner.score} sets!` :
+                '🎊 Game Over!';
+            showMessage(message, 'success');
+        }
+    </script>
+</body>
+</html>
