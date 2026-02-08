@@ -67,7 +67,7 @@ class GameManager {
   }
 
   getPlayerColor(index) {
-    const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#feca57'];
+    const colors = ['#ff6b35', '#f093fb', '#43e97b', '#feca57', '#fa709a', '#00c9a7'];
     return colors[index % colors.length];
   }
 
