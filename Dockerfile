@@ -2,9 +2,9 @@ FROM node:18-slim
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package.json ./
 
-RUN npm install --production
+RUN npm cache clean --force && npm install --omit=dev
 
 COPY server/ ./server/
 COPY public/ ./public/
