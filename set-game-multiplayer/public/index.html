@@ -295,55 +295,83 @@
             background: #f0f4ff;
         }
 
-        .shape {
-            width: 80px;
-            height: 40px;
-            position: relative;
+        .card.hint-highlight {
+            border-color: #ffc107;
+            border-width: 4px;
+            box-shadow: 0 0 12px rgba(255, 193, 7, 0.5);
         }
 
-        .diamond {
-            width: 40px;
-            height: 40px;
-            transform: rotate(45deg);
-            margin: 20px;
+        .card-shapes {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
         }
 
-        .oval {
-            width: 80px;
-            height: 40px;
-            border-radius: 50%;
+        .card-shapes svg {
+            width: 70px;
+            height: 30px;
         }
 
-        .squiggle {
-            width: 80px;
-            height: 40px;
+        /* Game Over Overlay */
+        .game-over-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
         }
 
-        .red.solid { background-color: #e53935; }
-        .green.solid { background-color: #43a047; }
-        .purple.solid { background-color: #8e24aa; }
-
-        .red.striped {
-            background: repeating-linear-gradient(45deg, #e53935, #e53935 3px, transparent 3px, transparent 6px);
-        }
-        .green.striped {
-            background: repeating-linear-gradient(45deg, #43a047, #43a047 3px, transparent 3px, transparent 6px);
-        }
-        .purple.striped {
-            background: repeating-linear-gradient(45deg, #8e24aa, #8e24aa 3px, transparent 3px, transparent 6px);
+        .game-over-card {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.3);
         }
 
-        .red.empty {
-            background-color: transparent;
-            border: 3px solid #e53935;
+        .game-over-card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 28px;
         }
-        .green.empty {
-            background-color: transparent;
-            border: 3px solid #43a047;
+
+        .game-over-card .winner-name {
+            font-size: 22px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
         }
-        .purple.empty {
-            background-color: transparent;
-            border: 3px solid #8e24aa;
+
+        .game-over-card .final-scores {
+            margin-bottom: 25px;
+        }
+
+        .game-over-card .final-scores .player-item {
+            justify-content: center;
+        }
+
+        .game-over-card button {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
         }
 
         .hidden {
@@ -354,19 +382,15 @@
             .board {
                 grid-template-columns: repeat(3, 1fr);
             }
-            .shape {
-                width: 60px;
-                height: 30px;
-            }
-            .oval {
-                width: 60px;
-                height: 30px;
+            .card-shapes svg {
+                width: 50px;
+                height: 22px;
             }
         }
     </style>
 </head>
 <body>
-    <h1>🎴 Set Card Game - Multiplayer</h1>
+    <h1>Set Card Game - Multiplayer</h1>
 
     <!-- Lobby Screen -->
     <div id="lobby" class="lobby">
@@ -411,9 +435,9 @@
         </div>
 
         <div class="controls">
-            <button onclick="requestHint()">💡 Hint</button>
-            <button onclick="add3Cards()">➕ Add 3 Cards</button>
-            <button onclick="leaveGame()">🚪 Leave Game</button>
+            <button onclick="requestHint()">Hint</button>
+            <button onclick="add3Cards()">Add 3 Cards</button>
+            <button onclick="leaveGame()">Leave Game</button>
         </div>
 
         <div class="message" id="message"></div>
@@ -426,6 +450,9 @@
         <div class="board" id="board"></div>
     </div>
 
+    <!-- Game Over Overlay (inserted dynamically) -->
+    <div id="gameOverOverlay" class="game-over-overlay hidden"></div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -433,6 +460,49 @@
         let currentRoomId = null;
         let gameState = null;
         let mySelection = [];
+
+        // --- XSS prevention ---
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // --- SVG shape rendering ---
+        const COLORS = {
+            red: '#e53935',
+            green: '#43a047',
+            purple: '#8e24aa'
+        };
+
+        function createSvgShape(shape, color, shading) {
+            const c = COLORS[color];
+            const patternId = `stripe-${color}-${Math.random().toString(36).slice(2, 8)}`;
+            let defs = '';
+            let fill;
+
+            if (shading === 'solid') {
+                fill = c;
+            } else if (shading === 'empty') {
+                fill = 'transparent';
+            } else {
+                // striped
+                defs = `<defs><pattern id="${patternId}" patternUnits="userSpaceOnUse" width="5" height="5" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="${c}" stroke-width="2"/></pattern></defs>`;
+                fill = `url(#${patternId})`;
+            }
+
+            let path;
+            if (shape === 'diamond') {
+                path = `<polygon points="35,2 68,15 35,28 2,15" fill="${fill}" stroke="${c}" stroke-width="2"/>`;
+            } else if (shape === 'oval') {
+                path = `<rect x="2" y="2" width="66" height="26" rx="13" ry="13" fill="${fill}" stroke="${c}" stroke-width="2"/>`;
+            } else {
+                // squiggle
+                path = `<path d="M5,25 C5,10 15,2 25,2 C35,2 35,12 45,12 C55,12 65,5 65,15 C65,20 55,28 45,28 C35,28 35,18 25,18 C15,18 5,25 5,25 Z" fill="${fill}" stroke="${c}" stroke-width="2"/>`;
+            }
+
+            return `<svg viewBox="0 0 70 30" xmlns="http://www.w3.org/2000/svg">${defs}${path}</svg>`;
+        }
 
         // Lobby functions
         function createRoom() {
@@ -464,13 +534,18 @@
             socket.emit('startGame', currentRoomId);
         }
 
+        function restartGame() {
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            socket.emit('restartGame', currentRoomId);
+        }
+
         function leaveGame() {
             location.reload();
         }
 
         // Game functions
         function selectCard(index) {
-            if (!gameState || !gameState.gameStarted) return;
+            if (!gameState || !gameState.gameStarted || gameState.gameOver) return;
             socket.emit('selectCard', { roomId: currentRoomId, cardIndex: index });
         }
 
@@ -499,9 +574,11 @@
             gameState = state;
 
             if (state.gameStarted && !state.gameOver) {
+                document.getElementById('gameOverOverlay').classList.add('hidden');
                 showGameScreen();
                 updateGameUI(state);
             } else if (state.gameOver) {
+                updateGameUI(state);
                 showGameOver(state);
             } else {
                 updateWaitingRoom(state);
@@ -510,9 +587,10 @@
 
         socket.on('gameStarted', (state) => {
             gameState = state;
+            document.getElementById('gameOverOverlay').classList.add('hidden');
             showGameScreen();
             updateGameUI(state);
-            showMessage('Game started! Find those sets! 🎮', 'success');
+            showMessage('Game started! Find those sets!', 'success');
         });
 
         socket.on('cardSelected', ({ playerId, cardIndex, selectedCards }) => {
@@ -524,24 +602,26 @@
 
         socket.on('validSet', ({ playerId, playerName, score }) => {
             const isMe = playerId === myPlayerId;
+            const safeName = escapeHtml(playerName);
             const message = isMe ?
-                `You found a set! 🎉 Score: ${score}` :
-                `${playerName} found a set! 🎉`;
+                `You found a set! Score: ${score}` :
+                `${safeName} found a set!`;
             showMessage(message, 'success');
             mySelection = [];
         });
 
         socket.on('invalidSet', ({ playerId, playerName }) => {
             const isMe = playerId === myPlayerId;
+            const safeName = escapeHtml(playerName);
             const message = isMe ?
                 'Not a valid set. Try again!' :
-                `${playerName} tried an invalid set`;
+                `${safeName} tried an invalid set`;
             showMessage(message, 'error');
             mySelection = [];
         });
 
         socket.on('playerJoined', ({ player }) => {
-            showMessage(`${player.name} joined the game`, 'info');
+            showMessage(`${escapeHtml(player.name)} joined the game`, 'info');
         });
 
         socket.on('playerLeft', ({ playerId }) => {
@@ -549,20 +629,19 @@
         });
 
         socket.on('hint', ({ indices }) => {
-            showMessage(`Hint: Try cards at positions ${indices.map(i => i + 1).join(', ')}`, 'info');
+            showMessage(`Hint: look at the highlighted cards`, 'info');
 
-            // Briefly highlight hint cards
             const cards = document.querySelectorAll('.card');
             indices.forEach(i => {
-                cards[i]?.classList.add('selected');
+                cards[i]?.classList.add('hint-highlight');
             });
 
             setTimeout(() => {
                 indices.forEach(i => {
-                    cards[i]?.classList.remove('selected');
+                    cards[i]?.classList.remove('hint-highlight');
                 });
                 showMessage('');
-            }, 2000);
+            }, 3000);
         });
 
         socket.on('cardsAdded', () => {
@@ -587,12 +666,23 @@
 
         function updateWaitingRoom(state) {
             const container = document.getElementById('waitingPlayers');
-            container.innerHTML = state.players.map(player => `
-                <div class="player-item">
-                    <div class="player-color" style="background: ${player.color}"></div>
-                    <div class="player-name">${player.name}</div>
-                </div>
-            `).join('');
+            container.innerHTML = '';
+            state.players.forEach(player => {
+                const item = document.createElement('div');
+                item.className = 'player-item';
+
+                const colorDot = document.createElement('div');
+                colorDot.className = 'player-color';
+                colorDot.style.background = player.color;
+
+                const name = document.createElement('div');
+                name.className = 'player-name';
+                name.textContent = player.name;
+
+                item.appendChild(colorDot);
+                item.appendChild(name);
+                container.appendChild(item);
+            });
         }
 
         function showGameScreen() {
@@ -605,17 +695,32 @@
             document.getElementById('gameRoomCode').textContent = state.roomId;
             document.getElementById('cardsLeft').textContent = state.deckSize;
 
-            // Update players
+            // Update players using DOM APIs (XSS-safe)
             const playersContainer = document.getElementById('playersDisplay');
-            playersContainer.innerHTML = state.players
+            playersContainer.innerHTML = '';
+            [...state.players]
                 .sort((a, b) => b.score - a.score)
-                .map(player => `
-                    <div class="player-item">
-                        <div class="player-color" style="background: ${player.color}"></div>
-                        <div class="player-name">${player.name}${player.id === myPlayerId ? ' (You)' : ''}</div>
-                        <div class="player-score">${player.score}</div>
-                    </div>
-                `).join('');
+                .forEach(player => {
+                    const item = document.createElement('div');
+                    item.className = 'player-item';
+
+                    const colorDot = document.createElement('div');
+                    colorDot.className = 'player-color';
+                    colorDot.style.background = player.color;
+
+                    const name = document.createElement('div');
+                    name.className = 'player-name';
+                    name.textContent = player.name + (player.id === myPlayerId ? ' (You)' : '');
+
+                    const score = document.createElement('div');
+                    score.className = 'player-score';
+                    score.textContent = player.score;
+
+                    item.appendChild(colorDot);
+                    item.appendChild(name);
+                    item.appendChild(score);
+                    playersContainer.appendChild(item);
+                });
 
             renderBoard();
         }
@@ -630,7 +735,6 @@
                 const cardEl = document.createElement('div');
                 cardEl.className = 'card';
 
-                // Check if this card is selected by me
                 if (mySelection.includes(index)) {
                     cardEl.classList.add('selected', 'my-selection');
                     const myPlayer = gameState.players.find(p => p.id === myPlayerId);
@@ -638,7 +742,6 @@
                         cardEl.style.borderColor = myPlayer.color;
                     }
                 } else {
-                    // Check if selected by other players
                     for (let [playerId, selection] of Object.entries(gameState.selections || {})) {
                         if (selection.includes(index) && playerId !== myPlayerId) {
                             cardEl.classList.add('selected');
@@ -650,23 +753,17 @@
                     }
                 }
 
-                cardEl.appendChild(createShapeElement(card));
-                cardEl.addEventListener('click', () => selectCard(index));
+                const shapesContainer = document.createElement('div');
+                shapesContainer.className = 'card-shapes';
+                for (let i = 0; i < card.number; i++) {
+                    shapesContainer.insertAdjacentHTML('beforeend',
+                        createSvgShape(card.shape, card.color, card.shading));
+                }
+                cardEl.appendChild(shapesContainer);
 
+                cardEl.addEventListener('click', () => selectCard(index));
                 boardEl.appendChild(cardEl);
             });
-        }
-
-        function createShapeElement(card) {
-            const container = document.createElement('div');
-
-            for (let i = 0; i < card.number; i++) {
-                const shape = document.createElement('div');
-                shape.className = `shape ${card.shape} ${card.color} ${card.shading}`;
-                container.appendChild(shape);
-            }
-
-            return container;
         }
 
         function showMessage(text, type = '') {
@@ -676,10 +773,63 @@
         }
 
         function showGameOver(state) {
-            const message = state.winner ?
-                `🎊 Game Over! ${state.winner.name} wins with ${state.winner.score} sets!` :
-                '🎊 Game Over!';
-            showMessage(message, 'success');
+            const overlay = document.getElementById('gameOverOverlay');
+            overlay.innerHTML = '';
+            overlay.classList.remove('hidden');
+
+            const card = document.createElement('div');
+            card.className = 'game-over-card';
+
+            const title = document.createElement('h2');
+            title.textContent = 'Game Over!';
+            card.appendChild(title);
+
+            if (state.winner) {
+                const winner = document.createElement('div');
+                winner.className = 'winner-name';
+                winner.textContent = `${state.winner.name} wins with ${state.winner.score} sets!`;
+                card.appendChild(winner);
+            }
+
+            const scoresDiv = document.createElement('div');
+            scoresDiv.className = 'final-scores';
+            const sortedPlayers = [...(state.players || (gameState && gameState.players) || [])]
+                .sort((a, b) => b.score - a.score);
+            sortedPlayers.forEach(player => {
+                const item = document.createElement('div');
+                item.className = 'player-item';
+
+                const colorDot = document.createElement('div');
+                colorDot.className = 'player-color';
+                colorDot.style.background = player.color;
+
+                const name = document.createElement('div');
+                name.className = 'player-name';
+                name.textContent = player.name;
+
+                const score = document.createElement('div');
+                score.className = 'player-score';
+                score.textContent = player.score;
+
+                item.appendChild(colorDot);
+                item.appendChild(name);
+                item.appendChild(score);
+                scoresDiv.appendChild(item);
+            });
+            card.appendChild(scoresDiv);
+
+            const playAgainBtn = document.createElement('button');
+            playAgainBtn.textContent = 'Play Again';
+            playAgainBtn.addEventListener('click', restartGame);
+            card.appendChild(playAgainBtn);
+
+            const leaveBtn = document.createElement('button');
+            leaveBtn.textContent = 'Leave Game';
+            leaveBtn.className = 'btn-secondary';
+            leaveBtn.addEventListener('click', leaveGame);
+            card.appendChild(leaveBtn);
+
+            overlay.appendChild(card);
         }
     </script>
 </body>

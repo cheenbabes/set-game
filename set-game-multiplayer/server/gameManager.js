@@ -2,6 +2,24 @@ class GameManager {
   constructor() {
     this.rooms = new Map();
     this.playerRooms = new Map(); // playerId -> roomId mapping
+
+    // Clean up stale rooms every 5 minutes
+    this.ROOM_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+    setInterval(() => this.cleanupStaleRooms(), 5 * 60 * 1000);
+  }
+
+  cleanupStaleRooms() {
+    const now = Date.now();
+    for (const [roomId, room] of this.rooms) {
+      if (now - room.lastActivity > this.ROOM_TTL_MS) {
+        // Remove player mappings for this room
+        for (const player of room.players) {
+          this.playerRooms.delete(player.id);
+        }
+        this.rooms.delete(roomId);
+        console.log(`Cleaned up stale room ${roomId}`);
+      }
+    }
   }
 
   createRoom() {
@@ -13,7 +31,8 @@ class GameManager {
       board: [],
       gameStarted: false,
       gameOver: false,
-      selections: new Map() // playerId -> [cardIndices]
+      selections: new Map(), // playerId -> [cardIndices]
+      lastActivity: Date.now()
     });
     return roomId;
   }
@@ -61,6 +80,7 @@ class GameManager {
     room.gameStarted = true;
     room.gameOver = false;
     room.selections.clear();
+    room.lastActivity = Date.now();
 
     // Reset player scores
     room.players.forEach(player => player.score = 0);
@@ -109,6 +129,8 @@ class GameManager {
     if (!room || !room.gameStarted) {
       return { success: false, message: 'Game not started' };
     }
+
+    room.lastActivity = Date.now();
 
     if (cardIndex < 0 || cardIndex >= room.board.length) {
       return { success: false, message: 'Invalid card index' };

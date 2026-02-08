@@ -10,6 +10,11 @@ const io = socketIO(server);
 
 const PORT = process.env.PORT || 3000;
 
+function sanitizeName(name) {
+  if (typeof name !== 'string') return 'Player';
+  return name.replace(/[<>&"']/g, '').trim().slice(0, 20) || 'Player';
+}
+
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
@@ -23,7 +28,7 @@ io.on('connection', (socket) => {
   // Create a new game room
   socket.on('createRoom', (playerName) => {
     const roomId = gameManager.createRoom();
-    const player = gameManager.addPlayerToRoom(roomId, socket.id, playerName);
+    const player = gameManager.addPlayerToRoom(roomId, socket.id, sanitizeName(playerName));
 
     socket.join(roomId);
     socket.emit('roomCreated', { roomId, player });
@@ -49,7 +54,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    const player = gameManager.addPlayerToRoom(roomId, socket.id, playerName);
+    const player = gameManager.addPlayerToRoom(roomId, socket.id, sanitizeName(playerName));
     socket.join(roomId);
 
     socket.emit('roomJoined', { roomId, player });
@@ -148,6 +153,22 @@ io.on('connection', (socket) => {
     const gameState = gameManager.getGameState(roomId);
     io.to(roomId).emit('gameState', gameState);
     io.to(roomId).emit('cardsAdded', { count: 3 });
+  });
+
+  // Restart game (play again with same players)
+  socket.on('restartGame', (roomId) => {
+    const room = gameManager.getRoom(roomId);
+
+    if (!room) {
+      socket.emit('error', { message: 'Room not found' });
+      return;
+    }
+
+    gameManager.startGame(roomId);
+    const gameState = gameManager.getGameState(roomId);
+    io.to(roomId).emit('gameStarted', gameState);
+
+    console.log(`Game restarted in room ${roomId}`);
   });
 
   // Request hint
