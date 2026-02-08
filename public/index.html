@@ -116,6 +116,45 @@
             letter-spacing: 3px;
         }
 
+        .share-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            background: #e8eeff;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .share-link:hover {
+            background: #d0dbff;
+        }
+
+        .share-link-text {
+            font-size: 13px;
+            color: #555;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+
+        .share-link-icon {
+            font-size: 14px;
+            color: #667eea;
+            flex-shrink: 0;
+        }
+
+        .share-link.copied {
+            background: #d4edda;
+        }
+
+        .share-link.copied .share-link-icon {
+            color: #28a745;
+        }
+
         .players-list {
             margin-bottom: 20px;
         }
@@ -287,18 +326,26 @@
         }
 
         .card.selected {
-            border-width: 4px;
+            border-width: 5px;
             transform: translateY(-5px);
+            box-shadow: 0 0 16px rgba(0, 0, 0, 0.35);
         }
 
         .card.my-selection {
-            background: #f0f4ff;
+            background: #e8eeff;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
         }
 
         .card.hint-highlight {
-            border-color: #ffc107;
-            border-width: 4px;
-            box-shadow: 0 0 12px rgba(255, 193, 7, 0.5);
+            border-color: #e65100;
+            border-width: 5px;
+            box-shadow: 0 0 20px rgba(230, 81, 0, 0.7), inset 0 0 10px rgba(230, 81, 0, 0.15);
+            animation: hint-pulse 0.8s ease-in-out infinite alternate;
+        }
+
+        @keyframes hint-pulse {
+            from { box-shadow: 0 0 12px rgba(230, 81, 0, 0.5), inset 0 0 8px rgba(230, 81, 0, 0.1); }
+            to { box-shadow: 0 0 25px rgba(230, 81, 0, 0.8), inset 0 0 12px rgba(230, 81, 0, 0.2); }
         }
 
         .card-shapes {
@@ -411,6 +458,10 @@
         <div class="room-code">
             <div class="room-code-label">Room Code</div>
             <div class="room-code-value" id="displayRoomCode"></div>
+            <div class="share-link" id="shareLink" onclick="copyShareLink()">
+                <span class="share-link-text" id="shareLinkText"></span>
+                <span class="share-link-icon" id="shareLinkIcon">Copy link</span>
+            </div>
         </div>
 
         <div class="players-list">
@@ -435,8 +486,8 @@
         </div>
 
         <div class="controls">
-            <button onclick="requestHint()">Hint</button>
-            <button onclick="add3Cards()">Add 3 Cards</button>
+            <button id="hintBtn" onclick="requestHint()">Hint</button>
+            <button id="add3Btn" onclick="add3Cards()">Add 3 Cards</button>
             <button onclick="leaveGame()">Leave Game</button>
         </div>
 
@@ -550,6 +601,7 @@
         }
 
         function requestHint() {
+            if (mySelection.length > 0) return;
             socket.emit('requestHint', currentRoomId);
         }
 
@@ -662,6 +714,23 @@
             document.getElementById('lobby').classList.add('hidden');
             document.getElementById('waitingRoom').classList.remove('hidden');
             document.getElementById('displayRoomCode').textContent = roomId;
+
+            const shareUrl = `${window.location.origin}?room=${roomId}`;
+            document.getElementById('shareLinkText').textContent = shareUrl;
+        }
+
+        function copyShareLink() {
+            const shareUrl = `${window.location.origin}?room=${currentRoomId}`;
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                const el = document.getElementById('shareLink');
+                const icon = document.getElementById('shareLinkIcon');
+                el.classList.add('copied');
+                icon.textContent = 'Copied!';
+                setTimeout(() => {
+                    el.classList.remove('copied');
+                    icon.textContent = 'Copy link';
+                }, 2000);
+            });
         }
 
         function updateWaitingRoom(state) {
@@ -725,8 +794,17 @@
             renderBoard();
         }
 
+        function updateButtonStates() {
+            const hintBtn = document.getElementById('hintBtn');
+            if (hintBtn) {
+                hintBtn.disabled = mySelection.length > 0;
+            }
+        }
+
         function renderBoard() {
             if (!gameState) return;
+
+            updateButtonStates();
 
             const boardEl = document.getElementById('board');
             boardEl.innerHTML = '';
@@ -831,6 +909,14 @@
 
             overlay.appendChild(card);
         }
+        // Auto-fill room code from URL parameter
+        (function() {
+            const params = new URLSearchParams(window.location.search);
+            const room = params.get('room');
+            if (room) {
+                document.getElementById('roomCode').value = room.toUpperCase();
+            }
+        })();
     </script>
 </body>
 </html>

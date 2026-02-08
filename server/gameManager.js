@@ -251,6 +251,10 @@ class GameManager {
       return { success: false, message: 'Not enough cards in deck' };
     }
 
+    if (this.findSets(room.board).length > 0) {
+      return { success: false, message: 'There is still a set on the board!' };
+    }
+
     this.dealCards(room, 3);
     return { success: true };
   }
